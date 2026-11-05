@@ -35,6 +35,18 @@ public static class ParkingCatalogValidation
                         foreach(var obstacle in obstacles)
                             if(Physics.ComputePenetration(probe,marker.position+Vector3.up*.04f,marker.rotation,obstacle,obstacle.transform.position,obstacle.transform.rotation,out _,out float distance) && distance > .01f)
                                 throw new Exception($"Level {i+1}: {marker.name} overlaps {obstacle.name}");
+                    var route = ParkingRoute.FindPath(level);
+                    if (route.Count < 2) throw new Exception($"Level {i+1}: missing arrow route");
+                    level.reverseEntry = !level.reverseEntry;
+                    var flippedRoute = ParkingRoute.FindPath(level);
+                    level.reverseEntry = !level.reverseEntry;
+                    if (!route.SequenceEqual(flippedRoute)) throw new Exception($"Level {i+1}: route depends on reverse requirement");
+                    ParkingRoute.Build(level);
+                    var arrows = level.transform.Find("Route arrows");
+                    if (arrows == null || arrows.childCount == 0) throw new Exception($"Level {i+1}: missing route sprites");
+                    ParkingRoute.Build(level);
+                    if (level.GetComponentsInChildren<SpriteRenderer>().Length != arrows.childCount)
+                        throw new Exception($"Level {i+1}: duplicate route sprites");
                     if(!Reachable(level,obstacles)) throw new Exception($"Level {i+1}: approach blocked");
                 }
                 finally { UnityEngine.Object.DestroyImmediate(level.gameObject); }
