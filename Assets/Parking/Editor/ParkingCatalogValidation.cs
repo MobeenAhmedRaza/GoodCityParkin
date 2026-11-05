@@ -37,6 +37,14 @@ public static class ParkingCatalogValidation
                                 throw new Exception($"Level {i+1}: {marker.name} overlaps {obstacle.name}");
                     var route = ParkingRoute.FindPath(level);
                     if (route.Count < 2) throw new Exception($"Level {i+1}: missing arrow route");
+                    foreach (var point in route)
+                        foreach (var obstacle in obstacles.Where(c => c.CompareTag("Respawn")))
+                        {
+                            var bounds = obstacle.bounds;
+                            if (point.x > bounds.min.x - 1 && point.x < bounds.max.x + 1 &&
+                                point.z > bounds.min.z - 1 && point.z < bounds.max.z + 1)
+                                throw new Exception($"Level {i+1}: curved route cuts into obstacle clearance");
+                        }
                     level.reverseEntry = !level.reverseEntry;
                     var flippedRoute = ParkingRoute.FindPath(level);
                     level.reverseEntry = !level.reverseEntry;

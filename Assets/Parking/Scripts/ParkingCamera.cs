@@ -8,9 +8,10 @@ namespace CityParking
         public Transform target;
         [Range(10, 24)] public float drivingSize = 14;
         public float followSharpness = 7;
-        [Min(.1f)] public float introDuration = 2;
+        [Min(.1f)] public float introDuration = 1.5f;
         public const float MinZoomSize = 10, MaxZoomSize = 24;
         public const float IsometricPitch = 35.2643897f;
+        public Quaternion IntroRotation => Quaternion.Euler(90, 45, 0);
         public Quaternion ViewRotation => Quaternion.Euler(IsometricPitch, 45, 0);
         public bool IntroPlaying { get; private set; }
         public float Zoom01 => Mathf.InverseLerp(MaxZoomSize, MinZoomSize, drivingSize);
@@ -50,8 +51,9 @@ namespace CityParking
             {
                 float t = Mathf.Clamp01(introElapsed / Mathf.Max(.1f, introDuration));
                 float eased = t * t * (3 - 2 * t);
+                rotation = Quaternion.Slerp(IntroRotation, ViewRotation, eased);
                 focus = Vector3.Lerp(Vector3.zero, desired, eased);
-                view.orthographicSize = Mathf.Lerp(Mathf.Max(size * 1.6f, CourseSize(rotation, view.aspect)), size, eased);
+                view.orthographicSize = Mathf.Lerp(Mathf.Max(size * 1.6f, CourseSize(IntroRotation, view.aspect)), size, eased);
                 introElapsed += Time.unscaledDeltaTime;
                 if (t >= 1) IntroPlaying = false;
             }

@@ -70,7 +70,43 @@ namespace CityParking
                 while (next > i + 1 && !Clear(result[i], result[next])) next--;
                 smooth.Add(result[next]); i = next;
             }
-            return smooth;
+            return RoundCorners(smooth, Clear);
+        }
+
+        static List<Vector3> RoundCorners(List<Vector3> path, System.Func<Vector3, Vector3, bool> clear)
+        {
+            var rounded = new List<Vector3> { path[0] };
+            for (int i = 1; i < path.Count - 1; i++)
+            {
+                Vector3 corner = path[i];
+                Vector3 incoming = corner - path[i - 1], outgoing = path[i + 1] - corner;
+                // Reserve half of each adjoining segment so neighboring curves never overlap.
+                float radius = Mathf.Min(4f, Mathf.Min(incoming.magnitude, outgoing.magnitude) * .45f);
+                bool accepted = false;
+                for (; radius >= .025f; radius *= .5f)
+                {
+                    Vector3 entry = corner - incoming.normalized * radius;
+                    Vector3 exit = corner + outgoing.normalized * radius;
+                    int steps = Mathf.Max(8, Mathf.CeilToInt(radius * 2 / .1f));
+                    var curve = new List<Vector3> { entry };
+                    bool safe = clear(rounded[rounded.Count - 1], entry);
+                    for (int n = 1; n <= steps && safe; n++)
+                    {
+                        float t = n / (float)steps, u = 1 - t;
+                        Vector3 point = u * u * entry + 2 * u * t * corner + t * t * exit;
+                        safe = clear(curve[curve.Count - 1], point);
+                        curve.Add(point);
+                    }
+                    if (!safe || !clear(exit, path[i + 1])) continue;
+                    rounded.AddRange(curve);
+                    accepted = true;
+                    break;
+                }
+                // Extremely tight corners retain the verified route instead of cutting an obstacle.
+                if (!accepted) rounded.Add(corner);
+            }
+            rounded.Add(path[path.Count - 1]);
+            return rounded;
         }
 
         public static void Build(ParkingLevel level)

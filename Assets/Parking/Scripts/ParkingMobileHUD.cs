@@ -14,6 +14,9 @@ namespace CityParking
         Text heading, objective, stats, status, resultText;
         Image progress;
         Slider zoomSlider;
+        GameObject zoomPanel;
+        Button zoomButton;
+        bool zoomExpanded;
         GameObject levelMenu, resultPanel, nextButton;
         Font font;
         const int PageSize = 10;
@@ -56,8 +59,20 @@ namespace CityParking
             objective = Label("Objective",top,new Vector2(0,1),Vector2.one,new Vector2(18,-109),new Vector2(-18,-53),23,TextAnchor.MiddleLeft);
             stats = Label("Stats",top,Vector2.zero,new Vector2(1,0),new Vector2(18,8),new Vector2(-18,43),22,TextAnchor.MiddleLeft);
             var actions = Rect("Menu controls",safeRoot,new Vector2(0,1),Vector2.one,new Vector2(18,-244),new Vector2(-18,-190));
-            Action("Levels",actions,Vector2.zero,new Vector2(.48f,1),Vector2.zero,Vector2.zero,()=>ShowLevels(true));
-            Action("Restart",actions,new Vector2(.52f,0),Vector2.one,Vector2.zero,Vector2.zero,()=>{ course.SelectLevel(course.CurrentIndex); ClearControls(); });
+            HorizontalLayout(actions);
+            var levelsAction = Action("Levels",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>ShowLevels(true));
+            var restartAction = Action("Restart",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>{ course.SelectLevel(course.CurrentIndex); ClearControls(); });
+            zoomButton = Action("Zoom",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>
+            {
+                zoomExpanded = !zoomExpanded;
+                RefreshZoomVisibility();
+            });
+            foreach (var button in new[] { levelsAction, restartAction, zoomButton })
+            {
+                var sizing = button.gameObject.AddComponent<LayoutElement>();
+                sizing.minWidth = sizing.preferredWidth = 0;
+                sizing.flexibleWidth = 1;
+            }
             BuildZoomSlider();
             var controls = Rect("Driving Controls",safeRoot,Vector2.zero,new Vector2(1,0),new Vector2(18,22),new Vector2(-18,142));
             HorizontalLayout(controls);
@@ -84,6 +99,10 @@ namespace CityParking
             stats.text = $"{Mathf.CeilToInt(Mathf.Max(0,course.Remaining))}s remaining     Contacts  {course.Hits} / {level.collisionLimit}";
             status.text = string.IsNullOrEmpty(course.Status) ? "Park facing the arrow. Hold still for 2 seconds." : course.Status;
             progress.rectTransform.anchorMax = new Vector2(course.HoldProgress,0);
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (forward.Held || (keyboard != null && (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)))
+                zoomExpanded = false;
+            RefreshZoomVisibility();
             zoomSlider.interactable = !cameraRig.IntroPlaying;
             zoomSlider.SetValueWithoutNotify(cameraRig.Zoom01);
             if (cameraRig.IntroPlaying) status.text = "Get ready...";
@@ -113,9 +132,22 @@ namespace CityParking
             sizing.flexibleWidth = buttonCount;
             return group;
         }
+        public void ResetZoomVisibility()
+        {
+            zoomExpanded = false;
+            if (zoomPanel != null) RefreshZoomVisibility();
+        }
+        void RefreshZoomVisibility()
+        {
+            bool alwaysVisible = course.CurrentIndex < 5;
+            zoomButton.gameObject.SetActive(!alwaysVisible);
+            zoomPanel.SetActive(alwaysVisible || zoomExpanded);
+        }
         void BuildZoomSlider()
         {
             var panel = Panel("Camera zoom",safeRoot,new Vector2(0,1),Vector2.one,new Vector2(18,-324),new Vector2(-18,-256),ink);
+            zoomPanel = panel.gameObject;
+            ResetZoomVisibility();
             Label("Zoom label",panel,Vector2.zero,new Vector2(0,1),new Vector2(14,0),new Vector2(110,0),22,TextAnchor.MiddleLeft).text = "ZOOM";
             var root = Rect("Zoom slider",panel,Vector2.zero,Vector2.one,new Vector2(128,4),new Vector2(-24,-4));
             // A transparent raycast surface makes the whole 60-point row draggable.
@@ -205,8 +237,12 @@ namespace CityParking
         {
             resultPanel = Panel("Result",safeRoot,new Vector2(.5f,.5f),new Vector2(.5f,.5f),new Vector2(-310,-95),new Vector2(310,95),ink).gameObject;
             resultText = Label("Result title",resultPanel.transform,new Vector2(0,.5f),Vector2.one,new Vector2(12,0),new Vector2(-12,-10),26,TextAnchor.MiddleCenter);
-            Action("Try again",resultPanel.transform,Vector2.zero,new Vector2(.49f,.5f),new Vector2(14,14),new Vector2(-4,-4),()=>course.SelectLevel(course.CurrentIndex));
+            var retryButton = Action("Try again",resultPanel.transform,Vector2.zero,new Vector2(.49f,.5f),new Vector2(14,14),new Vector2(-4,-4),()=>course.SelectLevel(course.CurrentIndex));
             nextButton = Action("Continue",resultPanel.transform,new Vector2(.51f,0),new Vector2(1,.5f),new Vector2(4,14),new Vector2(-14,-4),()=>course.SelectLevel((course.CurrentIndex+1)%course.LevelCount)).gameObject;
+            retryButton.GetComponent<Image>().color = new Color32(0xCF, 0x61, 0x5B, 0xFF);
+            retryButton.GetComponentInChildren<Text>().fontSize = 30;
+            nextButton.GetComponent<Image>().color = new Color32(0x55, 0xB7, 0x46, 0xFF);
+            nextButton.GetComponentInChildren<Text>().fontSize = 30;
             resultPanel.SetActive(false);
         }
         RectTransform Rect(string name,Transform parent,Vector2 min,Vector2 max,Vector2 lower,Vector2 upper)

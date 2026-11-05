@@ -131,6 +131,7 @@ public static class ParkingSceneBuilder
         if (!rig) rig = course.overview.gameObject.AddComponent<ParkingCamera>();
         rig.target = course.car.transform;
         rig.drivingSize = 14;
+        rig.introDuration = 1.5f;
         course.overview.orthographic = true;
         course.overview.orthographicSize = 14;
         course.overview.transform.rotation = rig.ViewRotation;

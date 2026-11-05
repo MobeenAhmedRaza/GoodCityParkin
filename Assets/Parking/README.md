@@ -20,11 +20,11 @@ Edit the catalog's seed and count to configure the sequence, or edit layout pref
 
 The game is locked to portrait with safe-area-aware touch controls. Hold LEFT / RIGHT with DRIVE / REVERSE; BRAKE stops the car. WASD/arrows, Space, and R remain available on desktop.
 
-The fixed isometric camera starts each level with a two-second zoom from the course to the car. Driving and the timer pause during the intro. Afterward, use ZOOM (left = farther, right = closer). Zoom is retained between levels within the session.
+Each level starts with a 1.5-second camera animation from a top-down view of the whole course to the car’s isometric driving view. Driving and the timer pause during the intro. Afterward, use ZOOM (left = farther, right = closer). The slider stays visible in levels 1–5. From level 6, a Zoom button shares the Levels/Restart row and toggles the slider; accelerating or starting/restarting a level hides it. Zoom is retained between levels within the session.
 
 The Levels menu pauses play and shows ten levels per page. Use Previous / Next or enter a level number and tap Go. All 500 levels are selectable. Continue advances after success, and level 500 shows campaign completion. The last selected level is remembered on the device.
 
-Repeated `Resources/front` sprites mark an obstacle-aware approach from the spawn to the parking bay in every generated level. They point toward the destination even in reverse-parking levels; the arrow inside the bay still specifies the final car heading. Routes are built once per instantiated layout and reused on restart.
+Repeated `Resources/front` sprites mark an obstacle-aware approach from the spawn to the parking bay in every generated level. Turns use smooth quadratic curves, with tighter rounding where obstacles limit clearance. Arrows remain evenly spaced along the route and follow its changing direction. They point toward the destination even in reverse-parking levels; the arrow inside the bay still specifies the final car heading. Routes are built once per instantiated layout and reused on restart.
 
 Park the entire car in the green bay, face its arrow, and remain stopped for two seconds. Reverse levels require reversing into the bay. Each attempt resets its timer and contact count.
 

@@ -49,6 +49,7 @@ namespace CityParking
             }
             else for (int i = 0; i < levels.Length; i++) levels[i].gameObject.SetActive(i == selected);
             current = selected;
+            car.mobileControls?.ResetZoomVisibility();
             PlayerPrefs.SetInt(LastPlayedKey,current);
             ParkingRoute.Build(Level);
             car.ResetAt(Level.spawn);

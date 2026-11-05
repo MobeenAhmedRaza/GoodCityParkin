@@ -349,7 +349,7 @@ MonoBehaviour:
   target: {fileID: 1735545001}
   drivingSize: 14
   followSharpness: 7
-  introDuration: 2
+  introDuration: 1.5
 --- !u!114 &1005136247
 MonoBehaviour:
   m_ObjectHideFlags: 0
