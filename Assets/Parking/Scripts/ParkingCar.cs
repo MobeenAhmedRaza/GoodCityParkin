@@ -22,15 +22,22 @@ namespace CityParking
             bool blocked = !driving || (course != null && course.IsPaused);
             if (mobileControls != null && !blocked)
             {
-                if (mobileControls.Throttle != 0) throttle = mobileControls.Throttle;
-                if (mobileControls.Steering != 0) steer = mobileControls.Steering;
+                if (mobileControls.WheelMode)
+                {
+                    throttle = mobileControls.Throttle; steer = mobileControls.Steering;
+                }
+                else
+                {
+                    if (mobileControls.Throttle != 0) throttle = mobileControls.Throttle;
+                    if (mobileControls.Steering != 0) steer = mobileControls.Steering;
+                }
             }
             if (blocked) throttle = steer = 0;
             brake = blocked || (k != null && k.spaceKey.isPressed) || (mobileControls != null && mobileControls.Braking);
         }
         void FixedUpdate()
         {
-            if (course != null && course.IsPaused)
+            if (!driving || (course != null && course.IsPaused) || (mobileControls != null && mobileControls.WheelMode && !mobileControls.WheelHeld))
             {
                 body.linearVelocity = Vector3.zero;
                 body.angularVelocity = Vector3.zero;
@@ -41,6 +48,12 @@ namespace CityParking
             speed = Mathf.MoveTowards(speed, target, (brake ? 12 : throttle == 0 ? 2.5f : 4) * Time.fixedDeltaTime);
             body.linearVelocity = transform.forward * speed;
             body.MoveRotation(body.rotation * Quaternion.Euler(0, steer * speed * 17 * Time.fixedDeltaTime, 0));
+        }
+        public void StopMotion()
+        {
+            throttle = steer = 0; brake = true;
+            if (body == null) body = GetComponent<Rigidbody>();
+            body.linearVelocity = Vector3.zero; body.angularVelocity = Vector3.zero;
         }
         public void ResetAt(Transform spawn)
         {

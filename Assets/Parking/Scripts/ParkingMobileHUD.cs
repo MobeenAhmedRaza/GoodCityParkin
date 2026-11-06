@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace CityParking
 {
-    public class ParkingMobileHUD : MonoBehaviour
+    public partial class ParkingMobileHUD : MonoBehaviour
     {
         public ParkingCourse course;
         public ParkingCamera cameraRig;
@@ -27,9 +27,9 @@ namespace CityParking
         Button previousPage, nextPage;
         Rect lastSafe;
         Vector2Int lastScreen;
-        public float Throttle => (forward && forward.Held ? 1 : 0) - (reverse && reverse.Held ? 1 : 0);
-        public float Steering => (right && right.Held ? 1 : 0) - (left && left.Held ? 1 : 0);
-        public bool Braking => brake && brake.Held;
+        public float Throttle => wheelMode ? (WheelHeld ? (reverseGear ? -1 : 1) : 0) : (forward && forward.Held ? 1 : 0) - (reverse && reverse.Held ? 1 : 0);
+        public float Steering => wheelMode ? (wheel != null ? wheel.Steering : 0) : (right && right.Held ? 1 : 0) - (left && left.Held ? 1 : 0);
+        public bool Braking => wheelMode ? !WheelHeld : brake && brake.Held;
         readonly Color ink = new Color(.07f,.12f,.16f,.94f);
         readonly Color mint = new Color(.36f,.94f,.72f);
         void Awake()
@@ -41,6 +41,7 @@ namespace CityParking
                 Screen.orientation = ScreenOrientation.Portrait;
                 Application.targetFrameRate = 60;
             }
+            LoadControlPreference();
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             if (EventSystem.current == null)
             {
@@ -60,14 +61,15 @@ namespace CityParking
             stats = Label("Stats",top,Vector2.zero,new Vector2(1,0),new Vector2(18,8),new Vector2(-18,43),22,TextAnchor.MiddleLeft);
             var actions = Rect("Menu controls",safeRoot,new Vector2(0,1),Vector2.one,new Vector2(18,-244),new Vector2(-18,-190));
             HorizontalLayout(actions);
-            var levelsAction = Action("Levels",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>ShowLevels(true));
+            levelsButton = Action("Levels",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>ShowLevels(true));
             var restartAction = Action("Restart",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>{ course.SelectLevel(course.CurrentIndex); ClearControls(); });
             zoomButton = Action("Zoom",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,()=>
             {
                 zoomExpanded = !zoomExpanded;
                 RefreshZoomVisibility();
             });
-            foreach (var button in new[] { levelsAction, restartAction, zoomButton })
+            modeButton = Action("Controls",actions,Vector2.zero,Vector2.one,Vector2.zero,Vector2.zero,ShowControlChoice);
+            foreach (var button in new[] { levelsButton, restartAction, zoomButton, modeButton })
             {
                 var sizing = button.gameObject.AddComponent<LayoutElement>();
                 sizing.minWidth = sizing.preferredWidth = 0;
@@ -75,6 +77,7 @@ namespace CityParking
             }
             BuildZoomSlider();
             var controls = Rect("Driving Controls",safeRoot,Vector2.zero,new Vector2(1,0),new Vector2(18,22),new Vector2(-18,142));
+            buttonControls = controls.gameObject;
             HorizontalLayout(controls);
             var steering = ControlGroup("Steering",controls,2);
             left = Control("LEFT",steering,Vector2.zero,Vector2.one,"left");
@@ -83,10 +86,12 @@ namespace CityParking
             brake = Control("BRAKE",pedals,Vector2.zero,Vector2.one,"brake");
             reverse = Control("REVERSE",pedals,Vector2.zero,Vector2.one,"reverse");
             forward = Control("DRIVE",pedals,Vector2.zero,Vector2.one,"accelerate");
-            var feedback = Panel("Parking feedback",safeRoot,new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(-324,158),new Vector2(324,228),ink);
+            feedback = Panel("Parking feedback",safeRoot,new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(-324,158),new Vector2(324,228),ink);
             status = Label("Status",feedback,Vector2.zero,Vector2.one,new Vector2(12,10),new Vector2(-12,-5),22,TextAnchor.MiddleCenter);
             progress = Panel("Hold progress",feedback,Vector2.zero,Vector2.zero,new Vector2(0,0),new Vector2(0,5),mint).GetComponent<Image>();
-            BuildLevelMenu(); BuildResult();
+            BuildWheelControls();
+            BuildLevelMenu(); BuildResult(); BuildControlChoice();
+            ApplyControlMode();
             course.car.mobileControls = this;
             ApplySafeArea();
         }
@@ -95,22 +100,23 @@ namespace CityParking
             ApplySafeArea();
             var level = course.CurrentLevel;
             heading.text = $"{course.CurrentIndex+1:000} / {course.LevelCount}   {level.title}";
-            objective.text = level.instruction;
+            objective.text = NeedsControlTutorial ? (wheelMode ? "2/2: Hold and turn the wheel. Release to stop." : "1/2: Park using the driving buttons below.") : level.instruction;
             stats.text = $"{Mathf.CeilToInt(Mathf.Max(0,course.Remaining))}s remaining     Contacts  {course.Hits} / {level.collisionLimit}";
             status.text = string.IsNullOrEmpty(course.Status) ? "Park facing the arrow. Hold still for 2 seconds." : course.Status;
             progress.rectTransform.anchorMax = new Vector2(course.HoldProgress,0);
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
-            if (forward.Held || (keyboard != null && (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)))
+            if (WheelHeld || forward.Held || (keyboard != null && (keyboard.wKey.isPressed || keyboard.upArrowKey.isPressed)))
                 zoomExpanded = false;
             RefreshZoomVisibility();
             zoomSlider.interactable = !cameraRig.IntroPlaying;
             zoomSlider.SetValueWithoutNotify(cameraRig.Zoom01);
             if (cameraRig.IntroPlaying) status.text = "Get ready...";
-            resultPanel.SetActive(course.Finished && !levelMenu.activeSelf);
+            resultPanel.SetActive(course.Finished && !levelMenu.activeSelf && !controlChoice.activeSelf);
             if (course.Finished)
             {
                 resultText.text = course.Passed ? course.CurrentIndex == course.LevelCount - 1 ? $"ALL {course.LevelCount} LEVELS COMPLETE" : "PARKED!" : course.Status;
-                nextButton.SetActive(course.Passed);
+                if (switchingTrial) resultText.text = "BUTTONS PASSED! Try the wheel next...";
+                nextButton.SetActive(course.Passed && !NeedsControlTutorial);
             }
         }
         const float ControlSpacing = 12;
@@ -181,6 +187,7 @@ namespace CityParking
         }
         public void ClearControls()
         {
+            wheel?.Clear();
             left?.Clear(); right?.Clear(); forward?.Clear(); reverse?.Clear(); brake?.Clear();
         }
         void ShowLevels(bool open)
@@ -292,5 +299,7 @@ namespace CityParking
             return button;
         }
         void OnDisable() { ClearControls(); }
+        void OnApplicationFocus(bool focus) { if (!focus) ClearControls(); }
+        void OnApplicationPause(bool paused) { if (paused) ClearControls(); }
     }
 }

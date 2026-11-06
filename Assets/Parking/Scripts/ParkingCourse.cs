@@ -34,7 +34,7 @@ namespace CityParking
         void Start() { car.course = this; SelectLevel(PlayerPrefs.GetInt(LastPlayedKey, startingLevel)); }
         public void SelectLevel(int index)
         {
-            int selected = Mathf.Clamp(index, 0, LevelCount - 1);
+            int selected = car.mobileControls != null && car.mobileControls.NeedsControlTutorial ? 0 : Mathf.Clamp(index, 0, LevelCount - 1);
             if (catalog != null)
             {
                 if (activeLevel == null || selected != current)
@@ -57,6 +57,7 @@ namespace CityParking
             overview.GetComponent<ParkingCamera>()?.BeginLevel();
             remaining = Level.timeLimit;
             hits = 0; hold = 0; finished = passed = reversedIntoBay = false; status = "";
+            car.mobileControls?.OnControlLevelStarted();
         }
         public void RegisterCollision()
         {
@@ -87,6 +88,11 @@ namespace CityParking
             status = inside ? !aligned ? "Align with the bay arrow" : Level.reverseEntry && !reversedIntoBay ? "Reverse into this bay" : car.Speed >= .15f ? "Brake and stop completely" : "Hold still..." : "Follow the arrow inside the green bay";
             if (hold >= 2) Finish(true, "Perfectly parked!");
         }
-        void Finish(bool success, string message) { finished = true; passed = success; status = message; car.driving = false; }
+        void Finish(bool success, string message)
+        {
+            finished = true; passed = success; status = message; car.driving = false;
+            car.StopMotion();
+            car.mobileControls?.OnControlLevelFinished(success);
+        }
     }
 }

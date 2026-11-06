@@ -18,7 +18,13 @@ Edit the catalog's seed and count to configure the sequence, or edit layout pref
 
 ## Playing
 
-The game is locked to portrait with safe-area-aware touch controls. Hold LEFT / RIGHT with DRIVE / REVERSE; BRAKE stops the car. WASD/arrows, Space, and R remain available on desktop.
+The game is locked to portrait with safe-area-aware touch controls.
+
+On first use, level 1 introduces both control modes. Pass it with buttons, then it automatically restarts with the steering wheel. Failures retry the current mode. After passing with the wheel, choose a preferred mode and continue to level 2. The introduction stage and chosen mode are saved on the device. Until both trials are complete, level selection and control switching are locked.
+
+In wheel mode, hold the wheel to drive and drag around its centre to steer (up to 135 degrees each way). Release to stop immediately and centre the wheel. Tap the gearshift to select forward or reverse; shifting stops the car and requires touching the wheel again. The Controls button in the menu row opens the mode chooser and pauses the game. Switching modes preserves the level and timer, clears input, and stops the car. Focus loss and pauses also release the wheel.
+
+In button mode, hold LEFT / RIGHT with DRIVE / REVERSE; BRAKE stops the car. WASD/arrows, Space, and R remain available on desktop.
 
 Each level starts with a 1.5-second camera animation from a top-down view of the whole course to the car’s isometric driving view. Driving and the timer pause during the intro. Afterward, use ZOOM (left = farther, right = closer). The slider stays visible in levels 1–5. From level 6, a Zoom button shares the Levels/Restart row and toggles the slider; accelerating or starting/restarting a level hides it. Zoom is retained between levels within the session.
 
@@ -38,3 +44,5 @@ Park the entire car in the green bay, face its arrow, and remain stopped for two
 In a disposable project copy, run Unity with `-batchmode -nographics -executeMethod ParkingCatalogValidation.Run -quit` for catalog validation. Run `-batchmode -executeMethod ParkingValidation.Run` (without `-quit`) for Play Mode checks. The latter validates 15 representative parking completions, single-level activation, reverse entry, collision failure, restart, portrait UI, touch input, zoom, pagination, and jump-to-level; it restores the pre-test saved level.
 
 Corridor connectivity is a geometric sanity check, not proof of steering feasibility. Manual driving and physical-device performance testing are still needed for difficulty tuning. Assets use the requested Kenney suburban FBX folder and the included Kenney car kit.
+
+Run `-batchmode -executeMethod ParkingControlsValidation.Run` in a disposable project copy for wheel input, gear changes, immediate stopping, tutorial transitions, saved preferences, and existing mobile UI checks. The test restores saved player preferences.

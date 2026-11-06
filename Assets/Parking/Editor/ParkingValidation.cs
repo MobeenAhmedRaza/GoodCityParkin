@@ -20,6 +20,13 @@ public static class ParkingValidation
     {
         SessionState.SetBool(Key + ".HadProgress",PlayerPrefs.HasKey("CityParking.LastPlayedLevel"));
         SessionState.SetInt(Key + ".Progress",PlayerPrefs.GetInt("CityParking.LastPlayedLevel",0));
+        foreach (var key in new[] { ParkingMobileHUD.TutorialKey, ParkingMobileHUD.ModeKey })
+        {
+            SessionState.SetBool(Key + key + ".Exists",PlayerPrefs.HasKey(key));
+            SessionState.SetInt(Key + key,PlayerPrefs.GetInt(key));
+        }
+        PlayerPrefs.SetInt(ParkingMobileHUD.TutorialKey,3);
+        PlayerPrefs.SetInt(ParkingMobileHUD.ModeKey,0);
         SetPortraitGameView();
         EditorSceneManager.OpenScene("Assets/Scenes/SuburbanParking.unity");
         SessionState.SetBool(Key, true);
@@ -29,6 +36,11 @@ public static class ParkingValidation
     {
         if (SessionState.GetBool(Key + ".HadProgress",false)) PlayerPrefs.SetInt("CityParking.LastPlayedLevel",SessionState.GetInt(Key + ".Progress",0));
         else PlayerPrefs.DeleteKey("CityParking.LastPlayedLevel");
+        foreach (var key in new[] { ParkingMobileHUD.TutorialKey, ParkingMobileHUD.ModeKey })
+        {
+            if (SessionState.GetBool(Key + key + ".Exists",false)) PlayerPrefs.SetInt(key,SessionState.GetInt(Key + key,0));
+            else PlayerPrefs.DeleteKey(key);
+        }
         PlayerPrefs.Save();
     }
     static void SetPortraitGameView()
